@@ -1,6 +1,6 @@
 name: Builder
 
-run-name: Build ${{ inputs.package-id }} with ${{ inputs.ghc-version }}
+run-name: Build ${{ inputs.package-id }} with GHC ${{ inputs.ghc-version }}
 
 on:
   workflow_dispatch:
@@ -52,7 +52,9 @@ jobs:
       - name: Build and install cabal-plan
         id: cabal-plan
         run: |
-          cabal install cabal-plan
+          cd $(mktemp -d)
+          cabal install cabal-plan --constraint='cabal-plan +exe'
+          echo "$HOME/.cabal/bin" >> $GITHUB_PATH
           cabal-plan --version
         # A failure here is not essential
         continue-on-error: true
