@@ -2,6 +2,9 @@ name: Build a package
 
 run-name: Build ${{ inputs.package-id }} with GHC ${{ inputs.ghc-version }}
 
+env:
+  PKG_CONFIG_DEBUG_SPEW: 1
+
 on:
   workflow_dispatch:
     inputs:
