@@ -157,7 +157,9 @@ jobs:
           echo "PACKAGE_NAME=${BASH_REMATCH[1]}" >> $GITHUB_ENV
 
       - name: Formulate install plan for ${{ inputs.package-id }}
-        run: cabal build -v3 --dry-run ${{ env.PACKAGE_NAME }}
+        run: |
+          export PKG_CONFIG_PATH=/home/runner/work/hackage-builder/hackage-builder/secp256k1/lib/pkgconfig:/home/runner/work/hackage-builder/hackage-builder/libsodium/lib/pkgconfig
+          cabal build -v3 --dry-run ${{ env.PACKAGE_NAME }}
 
       - name: Display cabal-plan
         # This might not work
