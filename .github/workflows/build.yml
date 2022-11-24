@@ -75,5 +75,8 @@ jobs:
         if: ${{ steps.cabal-plan.conclusion == 'success' }}
         run: cabal-plan
 
+      - name: Build ${{ inputs.package-id }} dependencies
+        run: cabal build ${{ env.PACKAGE_NAME }} --only-dependencies
+
       - name: Build ${{ inputs.package-id }}
         run: cabal build ${{ env.PACKAGE_NAME }}
