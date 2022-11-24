@@ -38,6 +38,57 @@ jobs:
       - ubuntu-latest
 
     steps:
+
+      ## sodium
+      
+      - uses: actions/cache@v3
+        id: libsodium-cache
+        with:
+          path: $GITHUB_WORKSPACE/libsodium
+          key: libsodium
+
+      - uses: actions/checkout@v2
+        if: steps.libsodium-cache.cache-hit != 'true'
+        with:
+          repository: input-output-hk/libsodium
+          ref: draft-irtf-cfrg-vrf-03
+          path: libsodium/src
+
+      - name: Install libsodium
+        if: steps.libsodium-cache.cache-hit != 'true'
+        working-directory: $GITHUB_WORKSPACE/libsodium/src
+        run: |
+          ./configure --prefix=$GITHUB_WORKSPACE/libsodium
+          make
+          make install
+          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/libsodium/lib64/pkgconfig" >> $GITHUB_ENV
+
+      ## secp256k1
+      
+      - uses: actions/cache@v3
+        id: secp256k1-cache
+        with:
+          path: $GITHUB_WORKSPACE/secp256k1
+          key: secp256k1
+
+      - uses: actions/checkout@v2
+        if: steps.secp256k1-cache.cache-hit != 'true'
+        with:
+          repository: bitcoin-core/secp256k1
+          path: secp256k1/src
+
+      - name: Install secp256k1
+        if: steps.secp256k1-cache.cache-hit != 'true'
+        working-directory: $GITHUB_WORKSPACE/secp256k1/src
+        run: |
+          ./autogen.sh
+          ./configure --enable-module-extrakeys --enable-module-schnorrsig --prefix=$GITHUB_WORKSPACE/secp256k1
+          make
+          make install
+          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/secp256k1/lib64/pkgconfig" >> $GITHUB_ENV
+
+      ## normal stuff
+
       - uses: actions/checkout@v2
 
       - name: Setup GHC ${{ inputs.ghc-version }}
