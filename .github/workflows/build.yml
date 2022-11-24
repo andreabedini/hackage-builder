@@ -100,7 +100,7 @@ jobs:
       - run: pkg-config --version
       - run: pkg-config --libs libsodium 
       - run: pkg-config --libs libsecp256k1
-      - run: pkg-config --list-package-names | sort
+      - run: pkg-config --list-all
 
       ## normal stuff
 
