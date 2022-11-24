@@ -82,7 +82,7 @@ jobs:
           cat cabal.project.local
           echo '=================================================='
           # Parse package-id
-          PACKAGE_NAME_REGEX='(.*)-([0-9]+)(.[0-9]+)*$'
+          PACKAGE_NAME_REGEX='(.*)(-([0-9]+)(.[0-9]+)*)?$'
           [[ ${{ inputs.package-id }} =~ $PACKAGE_NAME_REGEX ]]
           echo "PACKAGE_NAME=${BASH_REMATCH[1]}" >> $GITHUB_ENV
 
