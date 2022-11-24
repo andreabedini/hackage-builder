@@ -41,43 +41,50 @@ jobs:
 
       ## sodium
       
-      - uses: actions/cache@v3
+      - name: libsodium - cache
+        uses: actions/cache@v3
         id: libsodium-cache
         with:
           path: ${{ github.workspace }}/libsodium
           key: libsodium
 
-      - uses: actions/checkout@v2
+      - name: libsodium - checkout
+        uses: actions/checkout@v2
         if: steps.libsodium-cache.cache-hit != 'true'
         with:
           repository: input-output-hk/libsodium
           ref: draft-irtf-cfrg-vrf-03
           path: libsodium/src
 
-      - name: Install libsodium
+      - name: libsodium - install
         if: steps.libsodium-cache.cache-hit != 'true'
         working-directory: ${{ github.workspace }}/libsodium/src
         run: |
           ./configure --prefix=${{ github.workspace }}/libsodium
           make
           make install
-          echo "PKG_CONFIG_PATH=${{ github.workspace }}/libsodium/lib64/pkgconfig" >> $GITHUB_ENV
+
+      - name: libsodium - set PKG_CONFIG_PATH
+        run: |
+          echo "PKG_CONFIG_PATH=${{ github.workspace }}/libsodium/lib64/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
       ## secp256k1
       
-      - uses: actions/cache@v3
+      - name: secp256k1 - cache
+        uses: actions/cache@v3
         id: secp256k1-cache
         with:
           path: ${{ github.workspace }}/secp256k1
           key: secp256k1
 
-      - uses: actions/checkout@v2
+      - name: secp256k1 - checkout
+        uses: actions/checkout@v2
         if: steps.secp256k1-cache.cache-hit != 'true'
         with:
           repository: bitcoin-core/secp256k1
           path: secp256k1/src
 
-      - name: Install secp256k1
+      - name: secp256k1 - install
         if: steps.secp256k1-cache.cache-hit != 'true'
         working-directory: ${{ github.workspace }}/secp256k1/src
         run: |
@@ -85,7 +92,10 @@ jobs:
           ./configure --enable-module-extrakeys --enable-module-schnorrsig --prefix=${{ github.workspace }}/secp256k1
           make
           make install
-          echo "PKG_CONFIG_PATH=${{ github.workspace }}/secp256k1/lib64/pkgconfig" >> $GITHUB_ENV
+
+      - name: secp256k1 - set PKG_CONFIG_PATH
+        run: |
+          echo "PKG_CONFIG_PATH=${{ github.workspace }}/secp256k1/lib64/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
       ## normal stuff
 
