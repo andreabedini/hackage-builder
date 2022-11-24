@@ -44,7 +44,7 @@ jobs:
       - uses: actions/cache@v3
         id: libsodium-cache
         with:
-          path: $GITHUB_WORKSPACE/libsodium
+          path: ${{ github.workspace }}/libsodium
           key: libsodium
 
       - uses: actions/checkout@v2
@@ -56,19 +56,19 @@ jobs:
 
       - name: Install libsodium
         if: steps.libsodium-cache.cache-hit != 'true'
-        working-directory: $GITHUB_WORKSPACE/libsodium/src
+        working-directory: ${{ github.workspace }}/libsodium/src
         run: |
-          ./configure --prefix=$GITHUB_WORKSPACE/libsodium
+          ./configure --prefix=${{ github.workspace }}/libsodium
           make
           make install
-          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/libsodium/lib64/pkgconfig" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=${{ github.workspace }}/libsodium/lib64/pkgconfig" >> $GITHUB_ENV
 
       ## secp256k1
       
       - uses: actions/cache@v3
         id: secp256k1-cache
         with:
-          path: $GITHUB_WORKSPACE/secp256k1
+          path: ${{ github.workspace }}/secp256k1
           key: secp256k1
 
       - uses: actions/checkout@v2
@@ -79,13 +79,13 @@ jobs:
 
       - name: Install secp256k1
         if: steps.secp256k1-cache.cache-hit != 'true'
-        working-directory: $GITHUB_WORKSPACE/secp256k1/src
+        working-directory: ${{ github.workspace }}/secp256k1/src
         run: |
           ./autogen.sh
-          ./configure --enable-module-extrakeys --enable-module-schnorrsig --prefix=$GITHUB_WORKSPACE/secp256k1
+          ./configure --enable-module-extrakeys --enable-module-schnorrsig --prefix=${{ github.workspace }}/secp256k1
           make
           make install
-          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/secp256k1/lib64/pkgconfig" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=${{ github.workspace }}/secp256k1/lib64/pkgconfig" >> $GITHUB_ENV
 
       ## normal stuff
 
