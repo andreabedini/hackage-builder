@@ -1,0 +1,58 @@
+name: Builder
+
+on:
+  workflow_dispatch:
+    inputs:
+      package-id:
+        description: Package to build
+        required: true
+        type: string
+      ghc-version:
+        description: GHC version to use
+        required: true
+        type: choice
+        options:
+          - 8.10.7
+          - 9.0.2
+          - 9.2.5
+          - 9.4.3
+      cabal-version:
+        description: Cabal version to use
+        required: false
+        default: latest
+
+jobs:
+  build:
+    runs-on:
+      - ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Haskell
+        id: setup-haskell
+        uses: haskell/actions/setup@v2
+        with:
+          ghc-version: ${{ inputs.ghc-version }}
+          cabal-version: ${{ inputs.cabal-version }}
+
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.setup-haskell.outputs.cabal-store }}
+          key: ${{ runner.os }}-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-
+
+      - name: Setup project for ${{ inputs.package-id }}
+        run: |
+          echo 'extra-packages: ${{ inputs.package-id }}' > cabal.project.local
+          PACKAGE_NAME_REGEX='(.*)-([0-9]+)(.[0-9]+)*$'
+          [[ ${{ inputs.package-id }} =~ $PACKAGE_NAME_REGEX ]]
+          echo "PACKAGE_NAME=${BASH_REMATCH[1]}" >> $GITHUB_ENV
+
+      - name: Formulate install plan
+        run: cabal build --dry-run ${{ env.PACKAGE_NAME }}
+
+      - name: Build
+        run: cabal build ${{ env.PACKAGE_NAME }}
+
