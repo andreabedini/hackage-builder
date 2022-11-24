@@ -104,6 +104,7 @@ jobs:
       - run: pkg-config --libs libsodium 
       - run: pkg-config --libs libsecp256k1
       - run: pkg-config --list-all
+      - run: pkg-config --variable pc_path pkg-config
 
       ## normal stuff
 
