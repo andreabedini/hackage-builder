@@ -1,5 +1,7 @@
 name: Builder
 
+run-name: Build ${{ inputs.package-id }} with ${{ inputs.ghc-version }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -20,6 +22,10 @@ on:
         description: Cabal version to use
         required: false
         default: latest
+      index-state:
+        description: Index state to use
+        required: false
+        default: HEAD
 
 jobs:
   build:
@@ -29,30 +35,43 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Setup Haskell
+      - name: Setup GHC ${{ inputs.ghc-version }}
         id: setup-haskell
         uses: haskell/actions/setup@v2
         with:
           ghc-version: ${{ inputs.ghc-version }}
           cabal-version: ${{ inputs.cabal-version }}
 
-      - name: Cache
+      - name: Set up cache
         uses: actions/cache@v3
         with:
           path: ${{ steps.setup-haskell.outputs.cabal-store }}
-          key: ${{ runner.os }}-${{ github.sha }}
-          restore-keys: ${{ runner.os }}-
+          key: ${{ runner.os }}-${{ inputs.ghc-version }}-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-${{ inputs.ghc-version }}
+
+      - name: Build and install cabal-plan
+        id: cabal-plan
+        run: |
+          cabal install cabal-plan
+          cabal-plan --version
+        # A failure here is not essential
+        continue-on-error: true
 
       - name: Setup project for ${{ inputs.package-id }}
         run: |
-          echo 'extra-packages: ${{ inputs.package-id }}' > cabal.project.local
+          echo 'extra-packages: ${{ inputs.package-id }}' >> cabal.project.local
+          echo 'index-state: ${{ inputs.index-state }}' >> cabal.project.local
+          cat 
           PACKAGE_NAME_REGEX='(.*)-([0-9]+)(.[0-9]+)*$'
           [[ ${{ inputs.package-id }} =~ $PACKAGE_NAME_REGEX ]]
           echo "PACKAGE_NAME=${BASH_REMATCH[1]}" >> $GITHUB_ENV
 
-      - name: Formulate install plan
+      - name: Formulate install plan for ${{ inputs.package-id }}
         run: cabal build --dry-run ${{ env.PACKAGE_NAME }}
 
-      - name: Build
-        run: cabal build ${{ env.PACKAGE_NAME }}
+      - name: Display cabal-plan
+        if: ${{ steps.cabal-plan.conclusion == 'success' }}
+        run: cabal-plan
 
+      - name: Build ${{ inputs.package-id }}
+        run: cabal build ${{ env.PACKAGE_NAME }}
