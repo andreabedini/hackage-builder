@@ -97,6 +97,10 @@ jobs:
         run: |
           echo "PKG_CONFIG_PATH=${{ github.workspace }}/secp256k1/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
+      - run: pkg-config libsodium --path
+      - run: pkg-config libsecp256k1 --path
+      - run: pkg-config --list-package-names | sort
+
       ## normal stuff
 
       - uses: actions/checkout@v2
