@@ -90,6 +90,7 @@ jobs:
         run: cabal build --dry-run ${{ env.PACKAGE_NAME }}
 
       - name: Display cabal-plan
+        # This might not work
         if: ${{ steps.cabal-plan.conclusion == 'success' }}
         run: cabal-plan
 
