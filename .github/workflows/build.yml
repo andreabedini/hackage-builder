@@ -26,6 +26,11 @@ on:
         description: Index state to use
         required: false
         default: HEAD
+      documentation:
+        description: Enable documentation
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -55,15 +60,28 @@ jobs:
           cd $(mktemp -d)
           cabal install cabal-plan --constraint='cabal-plan +exe'
           echo "$HOME/.cabal/bin" >> $GITHUB_PATH
-          cabal-plan --version
         # A failure here is not essential
         continue-on-error: true
 
-      - name: Setup project for ${{ inputs.package-id }}
+      - name: Set up project for ${{ inputs.package-id }}
         run: |
+          # We need at least an empty cabal.project to avoid the implicit one
+          touch cabal.project
+          # Build cabal.project.local from inputs
           echo 'extra-packages: ${{ inputs.package-id }}' >> cabal.project.local
           echo 'index-state: ${{ inputs.index-state }}' >> cabal.project.local
-          cat 
+          if [[ '${{ inputs.documentation }}' == 'true' ]]; then
+            echo -e 'package *\n  documentation: True' >> cabal.project.local
+          fi
+          # Logging
+          echo '=================================================='
+          echo 'content of cabal.project '
+          cat cabal.project
+          echo '=================================================='
+          echo 'content of cabal.project.local '
+          cat cabal.project.local
+          echo '=================================================='
+          # Parse package-id
           PACKAGE_NAME_REGEX='(.*)-([0-9]+)(.[0-9]+)*$'
           [[ ${{ inputs.package-id }} =~ $PACKAGE_NAME_REGEX ]]
           echo "PACKAGE_NAME=${BASH_REMATCH[1]}" >> $GITHUB_ENV
