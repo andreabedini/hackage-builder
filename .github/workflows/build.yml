@@ -46,7 +46,7 @@ jobs:
         id: libsodium-cache
         with:
           path: ${{ github.workspace }}/libsodium
-          key: libsodium
+          key: libsodium-${{ runner.os }}
 
       - name: libsodium - checkout
         uses: actions/checkout@v2
@@ -75,7 +75,7 @@ jobs:
         id: secp256k1-cache
         with:
           path: ${{ github.workspace }}/secp256k1
-          key: secp256k1
+          key: secp256k1-${{ runner.os }}
 
       - name: secp256k1 - checkout
         uses: actions/checkout@v2
