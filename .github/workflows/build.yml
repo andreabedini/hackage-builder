@@ -41,13 +41,13 @@ jobs:
         id: ghcup-cache
         uses: actions/cache@v3
         with:
-          path: ${{ env.HOME }}/.ghcup
+          path: /home/runner/.ghcup
           key: ghcup-${{ runner.os }}-${{ inputs.ghc-version }}
 
       - name: Set up cabal cache
         uses: actions/cache@v3
         with:
-          path: ${{ env.HOME }}/.cabal
+          path: /home/runner/.cabal
           key: cabal-${{ runner.os }}-${{ inputs.ghc-version }}-${{ github.run_id }}
           restore-keys: cabal-${{ runner.os }}-${{ inputs.ghc-version }}
 
