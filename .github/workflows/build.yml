@@ -59,9 +59,11 @@ jobs:
           key: cabal-${{ runner.os }}-${{ inputs.ghc-version }}-${{ github.run_id }}
           restore-keys: cabal-${{ runner.os }}-${{ inputs.ghc-version }}
 
-      - name: Install cabal
-        if: steps.cabal-cache.outputs.cache-hit != 'true'
-        run: ghcup install cabal latest --isolate $PWD/cabal/bin
+      # Note: cache-hit is set to true only when cache hit occurs for the exact key match.
+      # For a partial key match like the one above, it will be set to false.
+      - name: Install cabal if necessary
+        run: |
+          [[ -x $PWD/cabal/bin/cabal ]] || ghcup install cabal latest --isolate $PWD/cabal/bin
 
       - name: Add cabal bin to path
         run: echo "$PWD/cabal/bin" >> $GITHUB_PATH
