@@ -161,7 +161,7 @@ jobs:
           [[ ${{ inputs.package-id }} =~ $PACKAGE_NAME_REGEX ]]
           echo "PACKAGE_NAME=${BASH_REMATCH[1]}" >> $GITHUB_ENV
 
-      - name: Run cabal for project
+      - name: Run cabal update for project
         working-directory: project
         run: cabal update
 
