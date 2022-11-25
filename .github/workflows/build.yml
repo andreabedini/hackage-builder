@@ -45,7 +45,7 @@ jobs:
         uses: actions/cache@v3
         id: libsodium-cache
         with:
-          path: ${{ github.workspace }}/libsodium
+          path: ${{ runner.temp }}/libsodium
           key: libsodium-${{ runner.os }}
 
       - name: libsodium - checkout
@@ -54,19 +54,19 @@ jobs:
         with:
           repository: input-output-hk/libsodium
           ref: draft-irtf-cfrg-vrf-03
-          path: libsodium/src
+          path: ${{ runner.temp}}/libsodium/src
 
       - name: libsodium - install
         if: steps.libsodium-cache.cache-hit != 'true'
-        working-directory: ${{ github.workspace }}/libsodium/src
+        working-directory: ${{ runner.temp }}/libsodium/src
         run: |
-          ./configure --prefix=${{ github.workspace }}/libsodium
+          ./configure --prefix=${{ runner.temp }}/libsodium
           make
           make install
 
       - name: libsodium - set PKG_CONFIG_PATH
         run: |
-          echo "PKG_CONFIG_PATH=${{ github.workspace }}/libsodium/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=${{ runner.temp }}/libsodium/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
       ## secp256k1
       
@@ -74,7 +74,7 @@ jobs:
         uses: actions/cache@v3
         id: secp256k1-cache
         with:
-          path: ${{ github.workspace }}/secp256k1
+          path: ${{ runner.temp }}/secp256k1
           key: secp256k1-${{ runner.os }}
 
       - name: secp256k1 - checkout
@@ -82,27 +82,20 @@ jobs:
         if: steps.secp256k1-cache.cache-hit != 'true'
         with:
           repository: bitcoin-core/secp256k1
-          path: secp256k1/src
+          path: ${{ runner.temp }}/secp256k1/src
 
       - name: secp256k1 - install
         if: steps.secp256k1-cache.cache-hit != 'true'
-        working-directory: ${{ github.workspace }}/secp256k1/src
+        working-directory: ${{ runner.temp }}/secp256k1/src
         run: |
           ./autogen.sh
-          ./configure --enable-module-extrakeys --enable-module-schnorrsig --prefix=${{ github.workspace }}/secp256k1
+          ./configure --enable-module-extrakeys --enable-module-schnorrsig --prefix=${{ runner.temp }}/secp256k1
           make
           make install
 
       - name: secp256k1 - set PKG_CONFIG_PATH
         run: |
-          echo "PKG_CONFIG_PATH=${{ github.workspace }}/secp256k1/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
-
-      - run: which pkg-config
-      - run: pkg-config --version
-      - run: pkg-config --libs libsodium 
-      - run: pkg-config --libs libsecp256k1
-      - run: pkg-config --list-all | sort
-      - run: pkg-config --variable pc_path pkg-config
+          echo "PKG_CONFIG_PATH=${{ runner.temp }}/secp256k1/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
       ## normal stuff
 
@@ -115,7 +108,7 @@ jobs:
           ghc-version: ${{ inputs.ghc-version }}
           cabal-version: ${{ inputs.cabal-version }}
 
-      - name: Set up cache
+      - name: Set up cabal store cache
         uses: actions/cache@v3
         with:
           path: ${{ steps.setup-haskell.outputs.cabal-store }}
