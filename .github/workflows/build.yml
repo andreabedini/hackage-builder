@@ -180,11 +180,16 @@ jobs:
         run: cabal build ${{ env.PACKAGE_NAME }} --only-dependencies
 
       - name: Build ${{ inputs.package-id }}
+        id: cabal-build
         working-directory: project
-        run: |
-          cabal build ${{ env.PACKAGE_NAME }}
+        continue-on-error: true
+        run: cabal build ${{ env.PACKAGE_NAME }}
 
-          # Workaround for cabal not display build errors (to be submitted)
+      # Workaround for cabal not display build errors (to be submitted)
+      - name: Show build failure
+        working-directory: project
+        if: ${{ failure() && steps.cabal-build.conclusion == 'failure' }}
+        run: |
           if [[ $? -ne 0 ]]; then
             ID=$(jq -r '."install-plan"[].id | select(startswith(env.PACKAGE_NAME))' < dist-newstyle/cache/plan.json)
             cat $HOME/.cabal/logs/ghc-${{ inputs.ghc-version }}/$ID.log
