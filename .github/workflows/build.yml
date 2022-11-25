@@ -18,10 +18,6 @@ on:
           - 9.0.2
           - 9.2.5
           - 9.4.3
-      cabal-version:
-        description: Cabal version to use
-        required: false
-        default: latest
       index-state:
         description: Index state to use
         required: false
@@ -35,35 +31,56 @@ on:
 jobs:
   build:
     runs-on:
-      - ubuntu-latest
+      - ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v2
 
-      - name: Setup GHC ${{ inputs.ghc-version }}
-        id: setup-haskell
+      ## GHC toolchain
+    
+      - name: Set up ghcup cache
+        id: ghcup-cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.HOME }}/.ghcup
+          key: ghcup-${{ runner.os }}-${{ inputs.ghc-version }}
+
+      - name: Set up cabal cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.HOME }}/.cabal
+          key: cabal-${{ runner.os }}-${{ inputs.ghc-version }}-${{ github.run_id }}
+          restore-keys: cabal-${{ runner.os }}-${{ inputs.ghc-version }}
+
+      - name: Install GHC ${{ inputs.ghc-version }}
+        id: ghcup-setup
+        if: steps.ghcup-cache.outputs.cache-hit != 'true'
         uses: haskell/actions/setup@v2
         with:
           ghc-version: ${{ inputs.ghc-version }}
-          cabal-version: ${{ inputs.cabal-version }}
+          cabal-version: latest
 
-      - name: Set up cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.setup-haskell.outputs.cabal-store }}
-          key: ${{ runner.os }}-${{ inputs.ghc-version }}-${{ github.sha }}
-          restore-keys: ${{ runner.os }}-${{ inputs.ghc-version }}
+      - name: Add ghcup bin to path
+        if: steps.ghcup-cache.outputs.cache-hit == 'true'
+        run: echo "$HOME/.ghcup/bin" >> $GITHUB_PATH
+
+      - name: Add cabal bin to path
+        run: echo "$HOME/.cabal/bin" >> $GITHUB_PATH
 
       - name: Build and install cabal-plan
         id: cabal-plan
-        run: |
-          cd $(mktemp -d)
-          cabal install cabal-plan --constraint='cabal-plan +exe'
-          echo "$HOME/.cabal/bin" >> $GITHUB_PATH
+        run: cabal install cabal-plan --constraint='cabal-plan +exe'
         # A failure here is not essential
         continue-on-error: true
 
+      ## Project
+
+      - name: Checkout project config
+        uses: actions/checkout@v2
+        with:
+          path: project
+
       - name: Set up project for ${{ inputs.package-id }}
+        working-directory: project
         run: |
           # We need at least an empty cabal.project to avoid the implicit one
           touch cabal.project
@@ -86,16 +103,33 @@ jobs:
           [[ ${{ inputs.package-id }} =~ $PACKAGE_NAME_REGEX ]]
           echo "PACKAGE_NAME=${BASH_REMATCH[1]}" >> $GITHUB_ENV
 
+      - name: Run cabal update for project
+        working-directory: project
+        run: cabal update
+
       - name: Formulate install plan for ${{ inputs.package-id }}
+        working-directory: project
         run: cabal build --dry-run ${{ env.PACKAGE_NAME }}
 
       - name: Display cabal-plan
+        working-directory: project
         # This might not work
         if: ${{ steps.cabal-plan.conclusion == 'success' }}
         run: cabal-plan
 
       - name: Build ${{ inputs.package-id }} dependencies
+        working-directory: project
         run: cabal build ${{ env.PACKAGE_NAME }} --only-dependencies
 
       - name: Build ${{ inputs.package-id }}
+        id: cabal-build
+        working-directory: project
         run: cabal build ${{ env.PACKAGE_NAME }}
+
+      # Workaround for cabal not display build errors (to be submitted)
+      - name: Show build failure
+        working-directory: project
+        if: ${{ failure() && steps.cabal-build.conclusion == 'failure' }}
+        run: |
+          ID=$(jq -r '."install-plan"[].id | select(startswith(env.PACKAGE_NAME))' < dist-newstyle/cache/plan.json)
+          cat $HOME/.cabal/logs/ghc-${{ inputs.ghc-version }}/$ID.log
