@@ -37,13 +37,6 @@ jobs:
 
       ## GHC toolchain
     
-      - name: Set up ghcup cache
-        id: ghcup-cache
-        uses: actions/cache@v3
-        with:
-          path: /home/runner/.ghcup
-          key: ghcup-${{ runner.os }}-${{ inputs.ghc-version }}
-
       - name: Set up cabal cache
         uses: actions/cache@v3
         with:
@@ -52,23 +45,17 @@ jobs:
           restore-keys: cabal-${{ runner.os }}-${{ inputs.ghc-version }}
 
       - name: Install GHC ${{ inputs.ghc-version }}
-        id: ghcup-setup
-        if: steps.ghcup-cache.outputs.cache-hit != 'true'
         uses: haskell/actions/setup@v2
         with:
           ghc-version: ${{ inputs.ghc-version }}
           cabal-version: latest
-
-      - name: Add ghcup bin to path
-        if: steps.ghcup-cache.outputs.cache-hit == 'true'
-        run: echo "$HOME/.ghcup/bin" >> $GITHUB_PATH
 
       - name: Add cabal bin to path
         run: echo "$HOME/.cabal/bin" >> $GITHUB_PATH
 
       - name: Build and install cabal-plan
         id: cabal-plan
-        run: cabal install cabal-plan --constraint='cabal-plan +exe'
+        run: cabal install -w ghc-${{ inputs.ghc-version }} cabal-plan --constraint='cabal-plan +exe'
         # A failure here is not essential
         continue-on-error: true
 
@@ -87,6 +74,7 @@ jobs:
           # Build cabal.project.local from inputs
           echo 'extra-packages: ${{ inputs.package-id }}' >> cabal.project.local
           echo 'index-state: ${{ inputs.index-state }}' >> cabal.project.local
+          echo 'with-compiler: ghc-${{ inputs.ghc-version }}' >> cabal.project.local
           if [[ '${{ inputs.documentation }}' == 'true' ]]; then
             echo -e 'package *\n  documentation: True' >> cabal.project.local
           fi
