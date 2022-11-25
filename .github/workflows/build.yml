@@ -100,14 +100,14 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ env.HOME }}/.ghcup
-          key: ${{ runner.os }}-${{ inputs.ghc-version }}
+          key: ghcup-${{ runner.os }}-${{ inputs.ghc-version }}
 
       - name: Set up cabal cache
         uses: actions/cache@v3
         with:
           path: ${{ env.HOME }}/.cabal
-          key: ${{ runner.os }}-${{ inputs.ghc-version }}-${{ github.sha }}
-          restore-keys: ${{ runner.os }}-${{ inputs.ghc-version }}
+          key: cabal-${{ runner.os }}-${{ inputs.ghc-version }}-${{ github.run_id }}
+          restore-keys: cabal-${{ runner.os }}-${{ inputs.ghc-version }}
 
       - name: Install GHC ${{ inputs.ghc-version }}
         id: ghcup-setup
