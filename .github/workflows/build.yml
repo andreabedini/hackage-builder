@@ -189,7 +189,5 @@ jobs:
         working-directory: project
         if: ${{ failure() && steps.cabal-build.conclusion == 'failure' }}
         run: |
-          if [[ $? -ne 0 ]]; then
-            ID=$(jq -r '."install-plan"[].id | select(startswith(env.PACKAGE_NAME))' < dist-newstyle/cache/plan.json)
-            cat $HOME/.cabal/logs/ghc-${{ inputs.ghc-version }}/$ID.log
-          fi
+          ID=$(jq -r '."install-plan"[].id | select(startswith(env.PACKAGE_NAME))' < dist-newstyle/cache/plan.json)
+          cat $HOME/.cabal/logs/ghc-${{ inputs.ghc-version }}/$ID.log
