@@ -182,7 +182,6 @@ jobs:
       - name: Build ${{ inputs.package-id }}
         id: cabal-build
         working-directory: project
-        continue-on-error: true
         run: cabal build ${{ env.PACKAGE_NAME }}
 
       # Workaround for cabal not display build errors (to be submitted)
