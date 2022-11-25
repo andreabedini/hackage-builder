@@ -18,10 +18,6 @@ on:
           - 9.0.2
           - 9.2.5
           - 9.4.3
-      cabal-version:
-        description: Cabal version to use
-        required: false
-        default: latest
       index-state:
         description: Index state to use
         required: false
@@ -45,7 +41,7 @@ jobs:
         uses: actions/cache@v3
         id: libsodium-cache
         with:
-          path: ${{ runner.temp }}/libsodium
+          path: extras/libsodium
           key: libsodium-${{ runner.os }}
 
       - name: libsodium - checkout
@@ -54,19 +50,19 @@ jobs:
         with:
           repository: input-output-hk/libsodium
           ref: draft-irtf-cfrg-vrf-03
-          path: ${{ runner.temp}}/libsodium/src
+          path: extras/libsodium/src
 
       - name: libsodium - install
         if: steps.libsodium-cache.cache-hit != 'true'
-        working-directory: ${{ runner.temp }}/libsodium/src
+        working-directory: extras/libsodium/src
         run: |
-          ./configure --prefix=${{ runner.temp }}/libsodium
+          ./configure --prefix=${{ github.workspace }}/extras/libsodium
           make
           make install
 
       - name: libsodium - set PKG_CONFIG_PATH
         run: |
-          echo "PKG_CONFIG_PATH=${{ runner.temp }}/libsodium/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=${{ github.workspace }}/extras/libsodium/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
       ## secp256k1
       
@@ -74,7 +70,7 @@ jobs:
         uses: actions/cache@v3
         id: secp256k1-cache
         with:
-          path: ${{ runner.temp }}/secp256k1
+          path: extras/secp256k1
           key: secp256k1-${{ runner.os }}
 
       - name: secp256k1 - checkout
@@ -82,49 +78,70 @@ jobs:
         if: steps.secp256k1-cache.cache-hit != 'true'
         with:
           repository: bitcoin-core/secp256k1
-          path: ${{ runner.temp }}/secp256k1/src
+          path: extras/secp256k1/src
 
       - name: secp256k1 - install
         if: steps.secp256k1-cache.cache-hit != 'true'
-        working-directory: ${{ runner.temp }}/secp256k1/src
+        working-directory: extras/secp256k1/src
         run: |
           ./autogen.sh
-          ./configure --enable-module-extrakeys --enable-module-schnorrsig --prefix=${{ runner.temp }}/secp256k1
+          ./configure --enable-module-extrakeys --enable-module-schnorrsig --prefix=${{ github.workspace }}/extras/secp256k1
           make
           make install
 
       - name: secp256k1 - set PKG_CONFIG_PATH
         run: |
-          echo "PKG_CONFIG_PATH=${{ runner.temp }}/secp256k1/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=${{ github.workspace }}/extras/secp256k1/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
-      ## normal stuff
-
-      - uses: actions/checkout@v2
-
-      - name: Setup GHC ${{ inputs.ghc-version }}
-        id: setup-haskell
-        uses: haskell/actions/setup@v2
-        with:
-          ghc-version: ${{ inputs.ghc-version }}
-          cabal-version: ${{ inputs.cabal-version }}
-
-      - name: Set up cabal store cache
+      ## GHC toolchain
+    
+      - name: Set up ghcup cache
+        id: ghcup-cache
         uses: actions/cache@v3
         with:
-          path: ${{ steps.setup-haskell.outputs.cabal-store }}
+          path: ${{ env.HOME }}/.ghcup
+          key: ${{ runner.os }}-${{ inputs.ghc-version }}
+
+      - name: Add ghcup to path
+        if: steps.ghcup-cache.cache-hit == 'true'
+        run: |
+          echo "$HOME/.ghcup/bin" >> $GITHUB_PATH
+          echo "$HOME/.cabal/bin" >> $GITHUB_PATH
+
+      - name: Set up cabal cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.HOME }}/.cabal
           key: ${{ runner.os }}-${{ inputs.ghc-version }}-${{ github.sha }}
           restore-keys: ${{ runner.os }}-${{ inputs.ghc-version }}
 
+      - name: Install GHC ${{ inputs.ghc-version }}
+        id: ghcup-setup
+        if: steps.ghcup-cache.cache-hit != 'true'
+        uses: haskell/actions/setup@v2
+        with:
+          ghc-version: ${{ inputs.ghc-version }}
+          cabal-version: latest
+
+      - name: Run cabal update if we haven't done it yet
+        if: steps.ghcup-setup.conclusion == 'skipped'
+        run: cabal update
+
       - name: Build and install cabal-plan
         id: cabal-plan
-        run: |
-          cd $(mktemp -d)
-          cabal install cabal-plan --constraint='cabal-plan +exe'
-          echo "$HOME/.cabal/bin" >> $GITHUB_PATH
+        run: cabal install cabal-plan --constraint='cabal-plan +exe'
         # A failure here is not essential
         continue-on-error: true
 
+      ## Project
+
+      - name: Checkout project config
+        uses: actions/checkout@v2
+        with:
+          path: project
+
       - name: Set up project for ${{ inputs.package-id }}
+        working-directory: project
         run: |
           # We need at least an empty cabal.project to avoid the implicit one
           touch cabal.project
@@ -148,19 +165,21 @@ jobs:
           echo "PACKAGE_NAME=${BASH_REMATCH[1]}" >> $GITHUB_ENV
 
       - name: Formulate install plan for ${{ inputs.package-id }}
-        run: |
-          export PKG_CONFIG_PATH=/home/runner/work/hackage-builder/hackage-builder/secp256k1/lib/pkgconfig:/home/runner/work/hackage-builder/hackage-builder/libsodium/lib/pkgconfig
-          cabal build -v3 --dry-run ${{ env.PACKAGE_NAME }}
+        working-directory: project
+        run: cabal build -v3 --dry-run ${{ env.PACKAGE_NAME }}
 
       - name: Display cabal-plan
+        working-directory: project
         # This might not work
         if: ${{ steps.cabal-plan.conclusion == 'success' }}
         run: cabal-plan
 
       - name: Build ${{ inputs.package-id }} dependencies
+        working-directory: project
         run: cabal build ${{ env.PACKAGE_NAME }} --only-dependencies
 
       - name: Build ${{ inputs.package-id }}
+        working-directory: project
         run: cabal build ${{ env.PACKAGE_NAME }}
 
       - if: ${{ failure() }}
