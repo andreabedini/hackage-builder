@@ -102,12 +102,6 @@ jobs:
           path: ${{ env.HOME }}/.ghcup
           key: ${{ runner.os }}-${{ inputs.ghc-version }}
 
-      - name: Add ghcup to path
-        if: steps.ghcup-cache.cache-hit == 'true'
-        run: |
-          echo "$HOME/.ghcup/bin" >> $GITHUB_PATH
-          echo "$HOME/.cabal/bin" >> $GITHUB_PATH
-
       - name: Set up cabal cache
         uses: actions/cache@v3
         with:
@@ -122,6 +116,13 @@ jobs:
         with:
           ghc-version: ${{ inputs.ghc-version }}
           cabal-version: latest
+
+      - name: Add ghcup bin to path
+        if: steps.ghcup-cache.cache-hit == 'true'
+        run: echo "$HOME/.ghcup/bin" >> $GITHUB_PATH
+
+      - name: Add cabal bin to path
+        run: echo "$HOME/.cabal/bin" >> $GITHUB_PATH
 
       - name: Build and install cabal-plan
         id: cabal-plan
@@ -166,7 +167,7 @@ jobs:
 
       - name: Formulate install plan for ${{ inputs.package-id }}
         working-directory: project
-        run: cabal build -v3 --dry-run ${{ env.PACKAGE_NAME }}
+        run: cabal build --dry-run ${{ env.PACKAGE_NAME }}
 
       - name: Display cabal-plan
         working-directory: project
