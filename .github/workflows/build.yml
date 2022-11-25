@@ -71,11 +71,12 @@ jobs:
       - name: Set cabal dir
         run: echo "CABAL_DIR=$PWD/cabal" >> $GITHUB_ENV
 
+      # Why don't we have a binary distribution!?
       - name: Build and install cabal-plan
         id: cabal-plan
         run: |
           cabal update
-          cabal install cabal-plan --constraint='cabal-plan +exe'
+          cabal install cabal-plan --install-method=copy --overwrite-policy=always --constraint='cabal-plan +exe'
         # A failure here is not essential
         continue-on-error: true
 
