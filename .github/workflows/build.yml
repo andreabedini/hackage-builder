@@ -2,9 +2,6 @@ name: Build a package
 
 run-name: Build ${{ inputs.package-id }} with GHC ${{ inputs.ghc-version }}
 
-env:
-  PKG_CONFIG_DEBUG_SPEW: 1
-
 on:
   workflow_dispatch:
     inputs:
@@ -100,6 +97,7 @@ jobs:
         run: |
           echo "PKG_CONFIG_PATH=${{ github.workspace }}/secp256k1/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
+      - run: which pkg-config
       - run: pkg-config --version
       - run: pkg-config --libs libsodium 
       - run: pkg-config --libs libsecp256k1
