@@ -169,3 +169,6 @@ jobs:
 
       - name: Build ${{ inputs.package-id }}
         run: cabal build ${{ env.PACKAGE_NAME }}
+
+      - if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
