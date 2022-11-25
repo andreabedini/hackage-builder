@@ -46,14 +46,14 @@ jobs:
 
       - name: libsodium - checkout
         uses: actions/checkout@v2
-        if: steps.libsodium-cache.cache-hit != 'true'
+        if: steps.libsodium-cache.outputs.cache-hit != 'true'
         with:
           repository: input-output-hk/libsodium
           ref: draft-irtf-cfrg-vrf-03
           path: extras/libsodium/src
 
       - name: libsodium - install
-        if: steps.libsodium-cache.cache-hit != 'true'
+        if: steps.libsodium-cache.outputs.cache-hit != 'true'
         working-directory: extras/libsodium/src
         run: |
           ./configure --prefix=${{ github.workspace }}/extras/libsodium
@@ -75,13 +75,13 @@ jobs:
 
       - name: secp256k1 - checkout
         uses: actions/checkout@v2
-        if: steps.secp256k1-cache.cache-hit != 'true'
+        if: steps.secp256k1-cache.outputs.cache-hit != 'true'
         with:
           repository: bitcoin-core/secp256k1
           path: extras/secp256k1/src
 
       - name: secp256k1 - install
-        if: steps.secp256k1-cache.cache-hit != 'true'
+        if: steps.secp256k1-cache.outputs.cache-hit != 'true'
         working-directory: extras/secp256k1/src
         run: |
           ./autogen.sh
@@ -111,14 +111,14 @@ jobs:
 
       - name: Install GHC ${{ inputs.ghc-version }}
         id: ghcup-setup
-        if: steps.ghcup-cache.cache-hit != 'true'
+        if: steps.ghcup-cache.outputs.cache-hit != 'true'
         uses: haskell/actions/setup@v2
         with:
           ghc-version: ${{ inputs.ghc-version }}
           cabal-version: latest
 
       - name: Add ghcup bin to path
-        if: steps.ghcup-cache.cache-hit == 'true'
+        if: steps.ghcup-cache.outputs.cache-hit == 'true'
         run: echo "$HOME/.ghcup/bin" >> $GITHUB_PATH
 
       - name: Add cabal bin to path
