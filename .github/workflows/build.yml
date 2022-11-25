@@ -37,25 +37,41 @@ jobs:
 
       ## GHC toolchain
     
-      - name: Set up cabal cache
+      - name: Set up ghc cache
+        id: ghc-cache
         uses: actions/cache@v3
         with:
-          path: /home/runner/.cabal
+          path: ghc
+          key: ghc-${{ runner.os }}-${{ inputs.ghc-version }}
+
+      - name: Install GHC ${{ inputs.ghc-version }}
+        if: steps.ghc-cache.outputs.cache-hit != 'true'
+        run: ghcup install ghc ${{ inputs.ghc-version }} --isolate $PWD/ghc
+
+      - name: Add ghc bin to path
+        run: echo "$PWD/ghc/bin" >> $GITHUB_PATH
+
+      - name: Set up cabal cache
+        id: cabal-cache
+        uses: actions/cache@v3
+        with:
+          path: cabal
           key: cabal-${{ runner.os }}-${{ inputs.ghc-version }}-${{ github.run_id }}
           restore-keys: cabal-${{ runner.os }}-${{ inputs.ghc-version }}
 
-      - name: Install GHC ${{ inputs.ghc-version }}
-        uses: haskell/actions/setup@v2
-        with:
-          ghc-version: ${{ inputs.ghc-version }}
-          cabal-version: latest
+      - name: Install cabal
+        if: steps.cabal-cache.outputs.cache-hit != 'true'
+        run: ghcup install cabal latest --isolate $PWD/cabal/bin
 
       - name: Add cabal bin to path
-        run: echo "$HOME/.cabal/bin" >> $GITHUB_PATH
+        run: echo "$PWD/cabal/bin" >> $GITHUB_PATH
+
+      - name: Set cabal dir
+        run: echo "CABAL_DIR=$PWD/cabal" >> $GITHUB_ENV
 
       - name: Build and install cabal-plan
         id: cabal-plan
-        run: cabal install -w ghc-${{ inputs.ghc-version }} cabal-plan --constraint='cabal-plan +exe'
+        run: cabal install cabal-plan --constraint='cabal-plan +exe'
         # A failure here is not essential
         continue-on-error: true
 
@@ -74,7 +90,6 @@ jobs:
           # Build cabal.project.local from inputs
           echo 'extra-packages: ${{ inputs.package-id }}' >> cabal.project.local
           echo 'index-state: ${{ inputs.index-state }}' >> cabal.project.local
-          echo 'with-compiler: ghc-${{ inputs.ghc-version }}' >> cabal.project.local
           if [[ '${{ inputs.documentation }}' == 'true' ]]; then
             echo -e 'package *\n  documentation: True' >> cabal.project.local
           fi
