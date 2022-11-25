@@ -96,38 +96,45 @@ jobs:
 
       ## GHC toolchain
     
-      - name: Set up ghcup cache
-        id: ghcup-cache
+      - name: Set up ghc cache
+        id: ghc-cache
         uses: actions/cache@v3
         with:
-          path: ${{ env.HOME }}/.ghcup
-          key: ghcup-${{ runner.os }}-${{ inputs.ghc-version }}
+          path: ghc
+          key: ghc-${{ runner.os }}-${{ inputs.ghc-version }}
+
+      - name: Install GHC ${{ inputs.ghc-version }}
+        if: steps.ghc-cache.outputs.cache-hit != 'true'
+        run: ghcup install ghc ${{ inputs.ghc-version }} --isolate $PWD/ghc
+
+      - name: Add ghc bin to path
+        run: echo "$PWD/ghc/bin" >> $GITHUB_PATH
 
       - name: Set up cabal cache
         uses: actions/cache@v3
         with:
-          path: ${{ env.HOME }}/.cabal
+          path: cabal
           key: cabal-${{ runner.os }}-${{ inputs.ghc-version }}-${{ github.run_id }}
           restore-keys: cabal-${{ runner.os }}-${{ inputs.ghc-version }}
 
-      - name: Install GHC ${{ inputs.ghc-version }}
-        id: ghcup-setup
-        if: steps.ghcup-cache.outputs.cache-hit != 'true'
-        uses: haskell/actions/setup@v2
-        with:
-          ghc-version: ${{ inputs.ghc-version }}
-          cabal-version: latest
-
-      - name: Add ghcup bin to path
-        if: steps.ghcup-cache.outputs.cache-hit == 'true'
-        run: echo "$HOME/.ghcup/bin" >> $GITHUB_PATH
+      # Note: cache-hit is set to true only when cache hit occurs for the exact key match.
+      # For a partial key match like the one above, it will be set to false.
+      - name: Install cabal if necessary
+        run: |
+          [[ -x $PWD/cabal/bin/cabal ]] || ghcup install cabal latest --isolate $PWD/cabal/bin
 
       - name: Add cabal bin to path
-        run: echo "$HOME/.cabal/bin" >> $GITHUB_PATH
+        run: echo "$PWD/cabal/bin" >> $GITHUB_PATH
 
+      - name: Set cabal dir
+        run: echo "CABAL_DIR=$PWD/cabal" >> $GITHUB_ENV
+
+      # Why don't we have a binary distribution!?
       - name: Build and install cabal-plan
         id: cabal-plan
-        run: cabal install cabal-plan --constraint='cabal-plan +exe'
+        run: |
+          cabal update
+          cabal install cabal-plan --install-method=copy --overwrite-policy=always --constraint='cabal-plan +exe'
         # A failure here is not essential
         continue-on-error: true
 
