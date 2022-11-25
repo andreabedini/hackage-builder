@@ -52,7 +52,6 @@ jobs:
         run: echo "$PWD/ghc/bin" >> $GITHUB_PATH
 
       - name: Set up cabal cache
-        id: cabal-cache
         uses: actions/cache@v3
         with:
           path: cabal
