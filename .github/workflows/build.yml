@@ -71,7 +71,9 @@ jobs:
 
       - name: Build and install cabal-plan
         id: cabal-plan
-        run: cabal install cabal-plan --constraint='cabal-plan +exe'
+        run: |
+          cabal update
+          cabal install cabal-plan --constraint='cabal-plan +exe'
         # A failure here is not essential
         continue-on-error: true
 
